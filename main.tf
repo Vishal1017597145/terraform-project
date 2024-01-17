@@ -131,6 +131,31 @@ resource "aws_s3_bucket_public_access_block" "bucket_access" {
   ignore_public_acls  = false
 }
 
+resource "aws_s3_bucket_policy" "lb-bucket-policy" {
+  bucket = aws_s3_bucket.mys3.id
+  policy = <<POLICY
+{
+  "Id": "testPolicy1561031527701",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "testStmt1561031516716",
+      "Action": [
+        "s3:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "arn:aws:s3:::mynews3bucketforproject1-terraform/lb-logs/*",
+      "Principal": {
+        "AWS": [
+           "${data.aws_elb_service_account.main.arn}"
+        ]
+      }
+    }
+  ]
+}
+POLICY
+}
+
 resource "aws_lb_target_group" "project1_tg" {
   name             = "target-group-1"
   port             = 80
@@ -171,7 +196,11 @@ resource "aws_lb" "project1_lb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.terra_sg.id]
   subnets            = [aws_subnet.sub1.id, aws_subnet.sub2.id]
-
+  access_logs {
+    bucket = aws_s3_bucket.mys3.id
+    prefix = "lb-logs"
+    enabled = true
+  }
   tags = {
     Name = "Production"
   }
